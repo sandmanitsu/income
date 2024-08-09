@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"income/internal/parse"
 	"math"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -35,22 +35,18 @@ func init() {
 	if *Percent != 0 || *StartSum != 0 || *MonthIncome != 0 {
 		fmt.Printf("Parsing flags:\nPerecent = %v\nStart Sum = %v\nMonth Income = %v\n", *Percent, *StartSum, *MonthIncome)
 
-		// Process(Params{
-		// 	Percent:     *Percent / 1000,
-		// 	Sum:         *StartSum,
-		// 	MonthIncome: *MonthIncome,
-		// })
+		Process(Params{
+			Percent:     *Percent / 1000,
+			Sum:         *StartSum,
+			MonthIncome: *MonthIncome,
+		})
 	} else {
-		fmt.Println("Type -percent=<> -start=<> -month-income=<>\nType -start to start process")
+		fmt.Println("Type -percent=<> -start=<> -month-income=<>\nType <result> to start process")
 	}
 }
 
 func main() {
-	p := Params{
-		Percent:     0,
-		Sum:         0,
-		MonthIncome: 0,
-	}
+	var p Params
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -58,63 +54,27 @@ func main() {
 		flags := strings.Split(text, "-")
 
 		for _, v := range flags {
-			flag := (strings.Split(v, "="))
-			if strings.ContainsAny(flag[0], "percent") {
-				flagValue := ""
+			flag, value := parse.Parse(v)
 
-				if len(flag) == 2 {
-					flagValue = strings.TrimSpace(flag[1])
-				}
-
-				value, _ := strconv.ParseFloat(flagValue, 64)
-
-				// p.Percent = value
-				fmt.Println(value)
+			switch flag {
+			case "percent":
+				p.Percent = value / 1000
+			case "start":
+				p.Sum = value
+			case "income":
+				p.MonthIncome = value
+			case "result":
+				Process(p)
+			case "exit":
+				os.Exit(1)
+			case "help":
+				fmt.Println("Type -percent=<value> -start=<value> -month-income=<value>\tType <result> to start process\n<exit> to exit the programm")
 			}
-
-			if strings.ContainsAny(flag[0], "start") {
-				flagValue := ""
-
-				if len(flag) == 2 {
-					flagValue = strings.TrimSpace(flag[1])
-				}
-
-				value, _ := strconv.ParseFloat(flagValue, 64)
-
-				// p.Sum = value
-				fmt.Println(value)
-			}
-
-			if strings.ContainsAny(flag[0], "income") {
-				flagValue := ""
-
-				if len(flag) == 2 {
-					flagValue = strings.TrimSpace(flag[1])
-				}
-
-				value, _ := strconv.ParseFloat(flagValue, 64)
-
-				// p.MonthIncome = value
-				fmt.Println(value)
-			}
-		}
-
-		if text == "start" {
-			fmt.Println(p)
 		}
 	}
 }
 
-// func Parse() (bool, string) {
-// 	if *StartSum == 0 {
-// 		return false, "Start Sum not entered"
-// 	}
-
-// 	return true, ""
-// }
-
 func Process(p Params) {
-	// fmt.Println(p)
 	var result []Result
 
 	for i := 0; i < 12; i++ {
@@ -123,7 +83,7 @@ func Process(p Params) {
 		p.Sum = p.Sum + percentIncome + p.MonthIncome
 
 		result = append(result, Result{
-			Sum:     p.Sum,
+			Sum:     math.Round(p.Sum),
 			Percent: percentIncome,
 		})
 	}
@@ -136,6 +96,6 @@ func ShowResult(r []Result) {
 
 	for i, v := range r {
 		t := time.AddDate(0, i, 0).Format("January, 2006")
-		fmt.Printf("Month: %v\nSum end of month: %v, Percent: %v\n\n", t, v.Sum, v.Percent)
+		fmt.Printf("Month: %v\tSum end of month: %v, Percent: %v\n", t, v.Sum, v.Percent)
 	}
 }
